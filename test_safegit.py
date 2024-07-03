@@ -9,8 +9,14 @@ class TestSafegit(unittest.TestCase):
 
     def setUp(self):
         # Setup a temporary directory for the repo
-        self.repo_dir = tempfile.TemporaryDirectory()
+        self.repo_dir = tempfile.TemporaryDirectory(dir=os.getcwd())
         self.repo = Repo.init(self.repo_dir.name)
+                # Create an initial commit so 'HEAD' reference exists
+        initial_file_path = os.path.join(self.repo_dir.name, 'initial.txt')
+        with open(initial_file_path, 'w') as f:
+            f.write("Initial content")
+        self.repo.index.add([initial_file_path])
+        self.repo.index.commit("Initial commit")
 
     def tearDown(self):
         # Cleanup the temporary directory
@@ -54,7 +60,7 @@ class TestSafegit(unittest.TestCase):
         mock_run.return_value = None
 
         # Call the main function with a commit message
-        with patch('sys.argv', ['git_commit_wrapper.py', 'commit message']):
+        with patch('sys.argv', ['safegit.py', 'commit message']):
             main()
 
         # Ensure the git commit command was called
