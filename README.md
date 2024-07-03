@@ -1,11 +1,28 @@
 # safegit
 
+## Installation
+```
+git clone git@github.com:kaashmonee/safegit.git
+
+
+```
+
+Add the following function to your `~/.bashrc` or `~/.zshrc`.
+```
+function gcap() {
+    /Users/<myusername>/<installationdir>/safegit/safegit.py "$1"
+    if [ $? -eq 0 ]; then
+            git push
+    fi
+}
+```
+
 ## Usage:
 
 Clone, make executable, and move to whichever location
 ```
 git add .
-safecommit "my commit message"
+gcap "my commit message"
 ```
 
 If CODEOWNERS exists and all the staged files match the pattern in the CODEOWNERS file:

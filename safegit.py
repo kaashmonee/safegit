@@ -43,21 +43,18 @@ def parse_codeowners(codeowners_path):
     with open(codeowners_path, 'r') as f:
         for line in f:
             line = line.strip()
+            
+            # codeowner lines that contain everything should be ignored
             if not line or line.startswith('#'):
                 continue
             parts = line.split()
             pattern = parts[0]
+            # Do not allow all encompassing patterns
+            if pattern == "*":
+                continue
             owners = parts[1:]
             codeowners[pattern] = owners
     return codeowners
-
-def is_file_owned(file, codeowners):
-    """Check if the file is in the codeowners' scope."""
-    for pattern in codeowners:
-        # Simple pattern matching, can use fnmatch or regex for more complex matching
-        if file.startswith(pattern):
-            return True
-    return False
 
 def files_not_in_codeowners(repo: Repo, repo_dir):
     staged_files = [item.a_path for item in repo.index.diff('HEAD')]

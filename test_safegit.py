@@ -3,7 +3,7 @@ import tempfile
 import os
 from unittest.mock import patch
 from git import Repo
-from safegit import get_staged_files, parse_codeowners, is_file_owned, main, files_not_in_codeowners
+from safegit import get_staged_files, parse_codeowners, main, files_not_in_codeowners
 from typing import List
 
 def make_codeowners_file(path: str, pattern: str, owners: List[str]) -> None:
@@ -55,13 +55,6 @@ class TestSafegit(unittest.TestCase):
             parse_codeowners(temp_codeowners_path)
         except FileNotFoundError as e:
             print("file not found error success:", e)
-
-
-    def test_is_file_owned(self):
-        codeowners = {'src/': ['@owner']}
-        self.assertTrue(is_file_owned('src/main.py', codeowners))
-        self.assertFalse(is_file_owned('docs/readme.md', codeowners))
-
 
     def test_commit_fails_if_not_in_codeowners(self):
         # Create and stage a test file that is not listed in CODEOWNERS
