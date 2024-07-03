@@ -3,7 +3,13 @@ import tempfile
 import os
 from unittest.mock import patch
 from git import Repo
-from safegit import get_staged_files, parse_codeowners, is_file_owned, main
+from safegit import get_staged_files, parse_codeowners, is_file_owned, main, files_not_in_codeowners
+from typing import List
+
+def make_codeowners_file(path: str, pattern: str, owners: List[str]) -> None:
+    with open(path, 'w') as f:
+        f.write(f"{pattern} {owners[0]}\n")
+
 
 class TestSafegit(unittest.TestCase):
 
@@ -32,21 +38,67 @@ class TestSafegit(unittest.TestCase):
         staged_files = get_staged_files(self.repo)
         self.assertIn('test.txt', staged_files)
 
-    @patch('safegit.CODEOWNERS_PATH', new_callable=lambda: tempfile.mkstemp()[1])
-    def test_parse_codeowners(self, mock_codeowners_path):
+    def test_parse_codeowners_exists(self):
         pattern = "src/*"
         owners = ["@owner"]
-        with open(mock_codeowners_path, 'w') as f:
-            f.write(f"{pattern} {owners[0]}\n")
+        temp_codeowners_path = os.path.join(self.repo_dir.name, "CODEOWNERS")
 
-        codeowners = parse_codeowners(mock_codeowners_path)
+        make_codeowners_file(temp_codeowners_path, pattern, owners)
+
+        codeowners = parse_codeowners(temp_codeowners_path)
         self.assertIn(pattern, codeowners)
         self.assertEqual(codeowners[pattern], owners)
+
+    def test_parse_codeowners_doesnt_exist(self):
+        temp_codeowners_path = os.path.join(self.repo_dir.name, "CODEOWNERS")
+        try:
+            parse_codeowners(temp_codeowners_path)
+        except FileNotFoundError as e:
+            print("file not found error success:", e)
+
 
     def test_is_file_owned(self):
         codeowners = {'src/': ['@owner']}
         self.assertTrue(is_file_owned('src/main.py', codeowners))
         self.assertFalse(is_file_owned('docs/readme.md', codeowners))
+
+
+    def test_commit_fails_if_not_in_codeowners(self):
+        # Create and stage a test file that is not listed in CODEOWNERS
+        pattern = "src/*"
+        owners = ["@owner"]
+        temp_codeowners_path = os.path.join(self.repo_dir.name, "CODEOWNERS")
+        make_codeowners_file(temp_codeowners_path, pattern, owners)
+
+        # This fle is not in the codeowners path so this should fail
+        test_file_path = os.path.join(self.repo_dir.name, 'test.py')
+        with open(test_file_path, 'w') as f:
+            f.write("Sample content")
+        self.repo.index.add([test_file_path])
+
+        # Check if there are any files not allowed
+        not_allowed_files = files_not_in_codeowners(self.repo, self.repo_dir.name)
+
+        # Assert that the commit is not allowed and the test file is in the not allowed list
+        self.assertIn('test.py', not_allowed_files)
+
+    def test_commit_succeeds_if_in_codeowners(self):
+        pattern = "src/*"
+        owners = ["@owner"]
+        temp_codeowners_path = os.path.join(self.repo_dir.name, "CODEOWNERS")
+        make_codeowners_file(temp_codeowners_path, pattern, owners)
+        # Create and stage a test file that is listed in CODEOWNERS
+        test_file_path = os.path.join(os.path.join(self.repo_dir.name, "src", 'test.txt'))
+        os.makedirs(os.path.dirname(test_file_path), exist_ok=True)
+        with open(test_file_path, 'w') as f:
+            f.write("Sample content")
+        self.repo.index.add([test_file_path])
+
+        # Check if there are any files not allowed
+        not_allowed_files = files_not_in_codeowners(self.repo, self.repo_dir.name)
+
+        # Assert that there are no files not allowed
+        self.assertEqual(len(not_allowed_files), 0)
 
     @patch('safegit.Repo')
     @patch('safegit.parse_codeowners')
