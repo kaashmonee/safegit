@@ -57,7 +57,7 @@ def is_file_owned(file, codeowners):
             return True
     return False
 
-def files_not_in_codeowners(repo, repo_dir):
+def files_not_in_codeowners(repo: Repo, repo_dir):
     staged_files = [item.a_path for item in repo.index.diff('HEAD')]
     codeowners_path = os.path.join(repo_dir, "CODEOWNERS")
     codeowners_patterns = parse_codeowners(codeowners_path)
@@ -66,9 +66,11 @@ def files_not_in_codeowners(repo, repo_dir):
     # Slow could take a while, could refactor...
     for file_path in staged_files:
         for pattern in codeowners_patterns:
-            regexPattern = re.compile(pattern)
-            if not regexPattern.match(file_path):
-                not_allowed_files.append(file_path)
+            matchResult = re.search(pattern, file_path)
+            if matchResult is not None:
+                continue
+            
+            not_allowed_files.append(file_path)
     
     return not_allowed_files
 
